@@ -134,6 +134,8 @@ static bool phy_pll_bypass(struct dsi_display *display)
 	return display->ctrl[display->cmd_master_idx].phy->hw.phy_pll_bypass;
 }
 
+struct dsi_display *primary_display;
+
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
 {
@@ -7694,6 +7696,7 @@ int dsi_display_get_modes(struct dsi_display *display,
 exit:
 	*out_modes = display->modes;
 	rc = 0;
+	primary_display = display;
 
 error:
 	if (rc)
@@ -9695,6 +9698,10 @@ void dsi_display_report_dead(struct dsi_display *display)
 	sde_connector_schedule_status_work(display->drm_conn, false);
 
 	sde_connector_report_panel_dead(c_conn, false);
+}
+
+struct dsi_display *get_main_display(void) {
+	return primary_display;
 }
 
 void __init dsi_display_register(void)
