@@ -967,6 +967,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		mi_dsi_panel_set_hdr_peak_mode(panel, bl_lvl);
 	}
 #endif
+	bl->real_bl_level = bl_lvl;
 
 	return rc;
 }
@@ -3402,6 +3403,7 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	panel->bl_config.dimming_min_bl = 0;
 	panel->bl_config.dimming_status = DIMMING_ENABLE;
 	panel->bl_config.user_disable_notification = false;
+	panel->bl_config.real_bl_level = 0;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-bl-min-level", &val);
 	if (rc) {
