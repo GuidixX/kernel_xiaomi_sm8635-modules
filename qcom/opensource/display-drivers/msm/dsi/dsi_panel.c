@@ -2452,6 +2452,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"mi,mdss-dsi-disable-insert-black-command",
 	"mi,mdss-dsi-insert-black-screen-command",
 #endif
+	"qcom,mdss-dsi-hbm-on-command",
+	"qcom,mdss-dsi-hbm-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2755,6 +2757,8 @@ const char *cmd_set_update_map[DSI_CMD_UPDATE_MAX] = {
 	"mi,mdss-dsi-dbv-327-to-326-command-update",
 	"mi,mdss-dsi-dbv-326-to-327-command-update",
 #endif
+	"qcom,mdss-dsi-hbm-on-command-state",
+	"qcom,mdss-dsi-hbm-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
