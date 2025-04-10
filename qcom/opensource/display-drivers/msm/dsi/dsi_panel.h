@@ -339,6 +339,7 @@ struct dsi_panel {
 	struct mi_dsi_panel_cfg mi_cfg;
 	bool qsync_enable;
 	bool pending_backlight_by_qsync;
+	bool fod_hbm_enabled;
 #endif
 };
 
@@ -498,4 +499,6 @@ int dsi_panel_video_mode_post_aod_locked(struct dsi_panel *panel);
 
 
 #endif /* MI_DISPLAY_MODIFY*/
+
+int dsi_panel_set_fod_hbm(struct dsi_panel *panel, bool status);
 #endif /* _DSI_PANEL_H_ */

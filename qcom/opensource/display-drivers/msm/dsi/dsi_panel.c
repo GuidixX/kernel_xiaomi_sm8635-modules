@@ -803,6 +803,100 @@ error:
 	return rc;
 }
 
+static u32 interpolate(uint32_t x, uint32_t xa, uint32_t xb,
+		       uint32_t ya, uint32_t yb)
+{
+	return ya - (ya - yb) * (x - xa) / (xb - xa);
+}
+
+static u32 dsi_panel_calc_fod_dim_alpha(struct dsi_panel *panel, u32 bl_level)
+{
+	int i;
+
+	if (!panel->fod_dim_lut)
+		return 0;
+
+	for (i = 0; i < panel->fod_dim_lut_len; i++)
+		if (panel->fod_dim_lut[i].brightness >= bl_level)
+			break;
+
+	if (i == 0)
+		return panel->fod_dim_lut[i].alpha;
+
+	if (i == panel->fod_dim_lut_len)
+		return panel->fod_dim_lut[i - 1].alpha;
+
+	return interpolate(bl_level,
+			   panel->fod_dim_lut[i - 1].brightness,
+			   panel->fod_dim_lut[i].brightness,
+			   panel->fod_dim_lut[i - 1].alpha,
+			   panel->fod_dim_lut[i].alpha);
+}
+
+static void dsi_panel_update_hbm_cmd(struct dsi_panel_cmd_set *cmd_set,
+				     unsigned int index, unsigned int value)
+{
+	unsigned int i;
+	u8 *tx_buf;
+
+	for (i = 0; i < cmd_set->count; i++) {
+		tx_buf = (u8 *)cmd_set->cmds[i].msg.tx_buf;
+
+		if (tx_buf[0] == index)
+			break;
+	}
+
+	if (i == cmd_set->count)
+		return;
+
+	tx_buf[1] = (value & 0xff00) >> 8;
+	tx_buf[2] = (value & 0x00ff);
+}
+
+int dsi_panel_set_fod_hbm(struct dsi_panel *panel, bool status)
+{
+	struct dsi_display_mode_priv_info *priv_info;
+	struct dsi_panel_cmd_set *cmd_set;
+	enum dsi_cmd_set_type type;
+	u32 bl_level;
+	int rc = 0;
+
+	mutex_lock(&panel->panel_lock);
+
+	if (status == panel->fod_hbm_enabled)
+		goto exit;
+
+	priv_info = panel->cur_mode->priv_info;
+	bl_level = panel->bl_config.real_bl_level;
+
+	if (status)
+		type = DSI_CMD_SET_HBM_ON;
+	else
+		type = DSI_CMD_SET_HBM_OFF;
+
+	cmd_set = &priv_info->cmd_sets[type];
+	if (!cmd_set->cmds) {
+		DSI_ERR("invalid command with type: %u\n", type);
+		rc = -EINVAL;
+		goto exit;
+	}
+
+	if (type == DSI_CMD_SET_HBM_OFF)
+		dsi_panel_update_hbm_cmd(cmd_set, MIPI_DCS_SET_DISPLAY_BRIGHTNESS,
+					 bl_level);
+
+	rc = dsi_panel_tx_cmd_set(panel, type);
+	if (rc)
+		goto exit;
+
+	panel->fod_hbm_enabled = status;
+
+exit:
+	mutex_unlock(&panel->panel_lock);
+
+	return rc;
+}
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
