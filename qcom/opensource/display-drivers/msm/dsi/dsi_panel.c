@@ -732,6 +732,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
+	if (panel->fod_hbm_enabled)
+		return 0;
+
 	dsi = &panel->mipi_device;
 	if (unlikely(panel->bl_config.lp_mode)) {
 		mode_flags = dsi->mode_flags;
