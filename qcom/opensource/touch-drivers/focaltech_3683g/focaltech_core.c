@@ -2207,6 +2207,8 @@ static int fts_ts_resume(struct device *dev)
 		ts_data->pocket_mode = DISABLE;
 	}
 
+	update_fod_press_status(0);
+
 	FTS_FUNC_EXIT();
 	return 0;
 }
