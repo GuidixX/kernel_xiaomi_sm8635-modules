@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0
+
+menu "Xiaomi character devices"
+
+config XLOGCHAR
+	tristate "Xiaomi xlogchar driver"
+	help
+	  Enable Xiaomi xlog character device support.
+	  Build as a module (m) to produce xlogchar.ko for DLKM packaging.
+
+endmenu

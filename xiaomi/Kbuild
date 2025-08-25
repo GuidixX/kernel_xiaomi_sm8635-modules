@@ -1,2 +1,1 @@
-# Xiaomi external module Kbuild placeholder.
-# Add obj-m and subdir rules when moving real drivers.
+obj-$(CONFIG_XLOGCHAR) += drivers/char/
