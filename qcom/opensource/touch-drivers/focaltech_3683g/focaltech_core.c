@@ -68,6 +68,9 @@
 
 #define FTS_WAKELOCK_TIMEOUT 5000
 
+#define LCD_ID_DET1 (364) // 0x16c
+#define LCD_ID_DET2 (379) // 0x17b
+
 /*****************************************************************************
 * Global variable or extern global variabls/functions
 *****************************************************************************/
@@ -2404,6 +2407,24 @@ static int fts_notifier_callback_init(struct fts_ts_data *ts_data)
 #endif //CONFIG_DRM
 	FTS_FUNC_EXIT();
 	return ret;
+}
+
+int fts_check_ts_id_gpio(struct device *dev)
+{
+	int gpio_det1, gpio_det2;
+
+	gpio_det1 = gpio_get_value(LCD_ID_DET1);
+	gpio_det2 = gpio_get_value(LCD_ID_DET2);
+
+	FTS_INFO("gpio_det1 = %d, gpio_det2 = %d\n", gpio_det1, gpio_det2);
+
+	if (!gpio_det1 && gpio_det2) {
+		FTS_INFO("focaltech touchscreen detected");
+		return 0;
+	} else {
+		FTS_ERROR("focaltech touchscreen not detected");
+		return -ENODEV;
+	}
 }
 
 static void fts_update_gesture_state(struct fts_ts_data *ts_data, int bit, bool enable)
