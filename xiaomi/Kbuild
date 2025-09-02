@@ -2,3 +2,4 @@ obj-$(CONFIG_XLOGCHAR) += drivers/char/
 obj-$(CONFIG_MI_DUMP_DISPLAY) += drivers/xiaomi/dump_display/
 obj-$(CONFIG_INPUT_AW86927_HAPTIC) += drivers/input/misc/aw86927_haptic/
 obj-$(CONFIG_SIH_VIBRATOR) += drivers/input/misc/si_haptic/
+obj-$(CONFIG_MI_THERMAL_INTERFACE) += drivers/thermal/xiaomi/

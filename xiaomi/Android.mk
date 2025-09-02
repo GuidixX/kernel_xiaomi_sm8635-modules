@@ -20,6 +20,7 @@ KBUILD_OPTIONS += CONFIG_XLOGCHAR=m
 KBUILD_OPTIONS += CONFIG_MI_DUMP_DISPLAY=m
 KBUILD_OPTIONS += CONFIG_INPUT_AW86927_HAPTIC=m
 KBUILD_OPTIONS += CONFIG_SIH_VIBRATOR=m
+KBUILD_OPTIONS += CONFIG_MI_THERMAL_INTERFACE=m
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/char/xlogchar.c
@@ -59,6 +60,14 @@ LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/input/misc/si_haptic/haptic.c \
                    $(LOCAL_PATH)/drivers/input/misc/si_haptic/sih688x_reg.c
 LOCAL_MODULE := si_haptic.ko
 LOCAL_MODULE_KBUILD_NAME := drivers/input/misc/si_haptic/si_haptic.ko
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
+include $(DLKM_DIR)/Build_external_kernelmodule.mk
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/thermal/xiaomi/mi_thermal_interface.c
+LOCAL_MODULE := mi_thermal_interface.ko
+LOCAL_MODULE_KBUILD_NAME := drivers/thermal/xiaomi/mi_thermal_interface.ko
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
 include $(DLKM_DIR)/Build_external_kernelmodule.mk
