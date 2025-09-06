@@ -32,6 +32,9 @@
 #define GOODIX_DEFAULT_CFG_NAME		"goodix_cfg_group.cfg"
 #define GOOIDX_INPUT_PHYS			"goodix_ts/input0"
 
+#define LCD_ID_DET1 (364) // 0x16c
+#define LCD_ID_DET2 (379) // 0x17b
+
 #if defined(CONFIG_DRM)
 static struct drm_panel *active_panel;
 static void goodix_panel_notifier_callback(enum panel_event_notifier_tag tag,
@@ -955,6 +958,25 @@ int goodix_ts_blocking_notify(enum ts_notify_event evt, void *v)
 }
 
 #if IS_ENABLED(CONFIG_OF)
+
+int goodix_check_ts_id_gpio(struct device *dev)
+{
+	int gpio_det1, gpio_det2;
+
+	gpio_det1 = gpio_get_value(LCD_ID_DET1);
+	gpio_det2 = gpio_get_value(LCD_ID_DET2);
+
+	ts_info("gpio_det1 = %d, gpio_det2 = %d\n", gpio_det1, gpio_det2);
+
+	if ((!gpio_det1 && !gpio_det2) || (gpio_det1 && !gpio_det2)) {
+		ts_info("goodix touchscreen detected");
+		return 0;
+	} else {
+		ts_err("goodix touchscreen not detected");
+		return -ENODEV;
+	}
+}
+
 /**
  * goodix_parse_dt_resolution - parse resolution from dt
  * @node: devicetree node
