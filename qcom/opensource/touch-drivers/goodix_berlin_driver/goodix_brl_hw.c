@@ -206,8 +206,8 @@ static int brl_reset_after(struct goodix_ts_core *cd)
 
 #define REG_SUSPEND_CURRENT 20
 #define REG_RESUME_CURRENT 30000
-#define REG_RESUME_MIN_VOLTAGE 3200000
-#define REG_RESUME_MAX_VOLTAGE 3200000
+#define REG_RESUME_MIN_VOLTAGE 3300000
+#define REG_RESUME_MAX_VOLTAGE 3300000
 
 static int brl_power_on(struct goodix_ts_core *cd, bool on)
 {
