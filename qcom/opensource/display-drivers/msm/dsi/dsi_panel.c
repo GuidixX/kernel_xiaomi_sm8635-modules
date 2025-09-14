@@ -837,6 +837,9 @@ error:
 static int dsi_panel_set_hbm(struct dsi_panel *panel, bool status)
 
 {
+	if (!panel->panel_initialized)
+		return 0;
+
 	struct disp_feature_ctl ctl = {
 		.feature_id = DISP_FEATURE_HBM,
 		.feature_val = status ? FEATURE_ON : FEATURE_OFF,
