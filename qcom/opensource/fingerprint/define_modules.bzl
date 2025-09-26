@@ -23,9 +23,38 @@ def define_modules(target, variant):
         visibility = ["//visibility:public"]
     )
 
+    # mi_fp fingerprint driver
+    mi_fp_rule_base = "{}_mi_fp".format(tv)
+
+    ddk_module(
+        name = mi_fp_rule_base,
+        out = "mi_fp.ko",
+        deps = ["//msm-kernel:all_headers"],
+        srcs = [
+            "mi_fp/fp_driver.c",
+            "mi_fp/fp_driver.h",
+            "mi_fp/fp_netlink.c",
+            "mi_fp/fp_platform.c"
+        ],
+        includes = ["include/linux"],
+        kernel_build = "//msm-kernel:{}".format(tv),
+        visibility = ["//visibility:public"]
+    )
+
     copy_to_dist_dir(
         name = "{}_dist".format(rule_base),
         data = [":{}".format(rule_base)],
+        dist_dir = "../out/target/product/{}/dlkm/lib/modules/".format(target),
+        flat = True,
+        wipe_dist_dir = False,
+        allow_duplicate_filenames = False,
+        mode_overrides = {"**/*": "644"},
+        log = "info",
+    )
+
+    copy_to_dist_dir(
+        name = "{}_mi_fp_dist".format(tv),
+        data = [":{}".format(mi_fp_rule_base)],
         dist_dir = "../out/target/product/{}/dlkm/lib/modules/".format(target),
         flat = True,
         wipe_dist_dir = False,
