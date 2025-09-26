@@ -1,0 +1,6 @@
+#
+# Kbuild for mi_fp fingerprint driver
+#
+
+mi_fp-objs := fp_driver.o fp_netlink.o fp_platform.o
+obj-m := mi_fp.o

@@ -23,6 +23,15 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
 include $(DLKM_DIR)/Build_external_kernelmodule.mk
 
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(LOCAL_PATH)/mi_fp/fp_driver.c \
+                   $(LOCAL_PATH)/mi_fp/fp_netlink.c \
+                   $(LOCAL_PATH)/mi_fp/fp_platform.c
+LOCAL_MODULE := mi_fp.ko
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
+include $(DLKM_DIR)/Build_external_kernelmodule.mk
+
 endif
 endif
 endif
