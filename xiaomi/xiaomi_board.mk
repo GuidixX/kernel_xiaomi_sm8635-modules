@@ -10,5 +10,6 @@ ifeq ($(call is-board-platform-in-list,pineapple), true)
 BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES_OUT)/xlogchar.ko
 BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES_OUT)/dump_display.ko
 BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES_OUT)/aw8697-haptic.ko
+BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES_OUT)/si_haptic.ko
 endif
 endif

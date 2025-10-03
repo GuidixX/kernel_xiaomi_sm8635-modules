@@ -19,6 +19,7 @@ DLKM_DIR   := device/qcom/common/dlkm
 KBUILD_OPTIONS += CONFIG_XLOGCHAR=m
 KBUILD_OPTIONS += CONFIG_MI_DUMP_DISPLAY=m
 KBUILD_OPTIONS += CONFIG_INPUT_AW86927_HAPTIC=m
+KBUILD_OPTIONS += CONFIG_SIH_VIBRATOR=m
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/char/xlogchar.c
@@ -43,6 +44,21 @@ LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/aw8697.c \
                    $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/ringbuffer.c
 LOCAL_MODULE := aw8697-haptic.ko
 LOCAL_MODULE_KBUILD_NAME := drivers/input/misc/aw86927_haptic/aw8697-haptic.ko
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
+include $(DLKM_DIR)/Build_external_kernelmodule.mk
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/input/misc/si_haptic/haptic.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/haptic_mid.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/haptic_misc.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/haptic_regmap.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/ringbuffer.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/sih688x.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/sih688x_func_config.c \
+                   $(LOCAL_PATH)/drivers/input/misc/si_haptic/sih688x_reg.c
+LOCAL_MODULE := si_haptic.ko
+LOCAL_MODULE_KBUILD_NAME := drivers/input/misc/si_haptic/si_haptic.ko
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
 include $(DLKM_DIR)/Build_external_kernelmodule.mk

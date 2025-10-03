@@ -1,3 +1,4 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 source "drivers/input/misc/aw86927_haptic/Kconfig"
+source "drivers/input/misc/si_haptic/Kconfig"
