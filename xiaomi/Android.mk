@@ -18,6 +18,7 @@ DLKM_DIR   := device/qcom/common/dlkm
 
 KBUILD_OPTIONS += CONFIG_XLOGCHAR=m
 KBUILD_OPTIONS += CONFIG_MI_DUMP_DISPLAY=m
+KBUILD_OPTIONS += CONFIG_INPUT_AW86927_HAPTIC=m
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/char/xlogchar.c
@@ -31,6 +32,17 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/xiaomi/dump_display/dump_display.c
 LOCAL_MODULE := dump_display.ko
 LOCAL_MODULE_KBUILD_NAME := drivers/xiaomi/dump_display/dump_display.ko
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
+include $(DLKM_DIR)/Build_external_kernelmodule.mk
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/aw8697.c \
+                   $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/aw86927.c \
+                   $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/aw_haptic.c \
+                   $(LOCAL_PATH)/drivers/input/misc/aw86927_haptic/ringbuffer.c
+LOCAL_MODULE := aw8697-haptic.ko
+LOCAL_MODULE_KBUILD_NAME := drivers/input/misc/aw86927_haptic/aw8697-haptic.ko
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
 include $(DLKM_DIR)/Build_external_kernelmodule.mk
