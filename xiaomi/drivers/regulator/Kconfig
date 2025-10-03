@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+menu "Xiaomi regulator drivers"
+
+config REGULATOR_WL2866D
+	tristate "WL2866D regulator support"
+	depends on I2C
+	default n
+	help
+	  Enable support for the WL2866D regulator used by Xiaomi boards.
+
+endmenu

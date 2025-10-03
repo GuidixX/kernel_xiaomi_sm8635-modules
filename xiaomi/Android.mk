@@ -21,6 +21,7 @@ KBUILD_OPTIONS += CONFIG_MI_DUMP_DISPLAY=m
 KBUILD_OPTIONS += CONFIG_INPUT_AW86927_HAPTIC=m
 KBUILD_OPTIONS += CONFIG_SIH_VIBRATOR=m
 KBUILD_OPTIONS += CONFIG_MI_THERMAL_INTERFACE=m
+KBUILD_OPTIONS += CONFIG_REGULATOR_WL2866D=m
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/char/xlogchar.c
@@ -68,6 +69,14 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/thermal/xiaomi/mi_thermal_interface.c
 LOCAL_MODULE := mi_thermal_interface.ko
 LOCAL_MODULE_KBUILD_NAME := drivers/thermal/xiaomi/mi_thermal_interface.ko
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
+include $(DLKM_DIR)/Build_external_kernelmodule.mk
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(LOCAL_PATH)/drivers/regulator/wl2866d.c
+LOCAL_MODULE := wl2866d.ko
+LOCAL_MODULE_KBUILD_NAME := drivers/regulator/wl2866d.ko
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(KERNEL_MODULES_OUT)
 include $(DLKM_DIR)/Build_external_kernelmodule.mk
