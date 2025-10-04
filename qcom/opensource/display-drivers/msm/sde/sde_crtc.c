@@ -49,6 +49,10 @@
 #include "msm_drv.h"
 #include "sde_vm.h"
 
+#ifdef MI_DISPLAY_MODIFY
+#include "mi_sde_crtc.h"
+#endif
+
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
 #define SDE_MULTIRECT_PLANE_MAX (SDE_STAGE_MAX * 2)
 
@@ -1000,6 +1004,17 @@ static int _sde_crtc_set_roi_v1(struct drm_crtc_state *state,
 				cstate->user_roi_list.roi[i].y1,
 				cstate->user_roi_list.roi[i].x2,
 				cstate->user_roi_list.roi[i].y2);
+		SDE_DEBUG("crtc%d: spr roi%d: spr roi (%d,%d) (%d,%d)\n",
+				DRMID(crtc), i,
+				cstate->user_roi_list.spr_roi[i].x1,
+				cstate->user_roi_list.spr_roi[i].y1,
+				cstate->user_roi_list.spr_roi[i].x2,
+				cstate->user_roi_list.spr_roi[i].y2);
+		SDE_EVT32_VERBOSE(DRMID(crtc),
+				cstate->user_roi_list.spr_roi[i].x1,
+				cstate->user_roi_list.spr_roi[i].y1,
+				cstate->user_roi_list.spr_roi[i].x2,
+				cstate->user_roi_list.spr_roi[i].y2);
 		SDE_DEBUG("crtc%d, roi_feature_flags %d: spr roi%d: spr roi (%d,%d) (%d,%d)\n",
 				DRMID(crtc), roi_v1.roi_feature_flags, i,
 				roi_v1.spr_roi[i].x1,
@@ -4892,6 +4907,9 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	SDE_ATRACE_BEGIN("crtc_commit");
 
 	idle_pc_state = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_PC_STATE);
+#ifdef MI_DISPLAY_MODIFY
+	mi_sde_crtc_check_layer_flags(crtc);
+#endif
 
 	sde_crtc->kickoff_in_progress = true;
 	sde_crtc->handle_fence_error_bw_update = false;
@@ -4993,8 +5011,6 @@ static int _sde_crtc_vblank_enable(
 {
 	struct drm_crtc *crtc;
 	struct drm_encoder *enc;
-	enum sde_intf_mode intf_mode;
-	bool wb_intf_mode = false;
 
 	if (!sde_crtc) {
 		SDE_ERROR("invalid crtc\n");
@@ -5005,9 +5021,6 @@ static int _sde_crtc_vblank_enable(
 	SDE_EVT32(DRMID(crtc), enable, sde_crtc->enabled,
 			crtc->state->encoder_mask,
 			sde_crtc->cached_encoder_mask);
-
-	intf_mode = sde_crtc_get_intf_mode(crtc, crtc->state);
-	wb_intf_mode = ((intf_mode == INTF_MODE_WB_BLOCK) || (intf_mode == INTF_MODE_WB_LINE));
 
 	if (enable) {
 		int ret;
@@ -5021,7 +5034,7 @@ static int _sde_crtc_vblank_enable(
 
 		mutex_lock(&sde_crtc->crtc_lock);
 		drm_for_each_encoder_mask(enc, crtc->dev, sde_crtc->cached_encoder_mask) {
-			if (sde_encoder_in_clone_mode(enc) || wb_intf_mode)
+			if (sde_encoder_in_clone_mode(enc))
 				continue;
 
 			sde_encoder_register_vblank_callback(enc, sde_crtc_vblank_cb, (void *)crtc);
@@ -5030,7 +5043,7 @@ static int _sde_crtc_vblank_enable(
 	} else {
 		mutex_lock(&sde_crtc->crtc_lock);
 		drm_for_each_encoder_mask(enc, crtc->dev, sde_crtc->cached_encoder_mask) {
-			if (sde_encoder_in_clone_mode(enc) || wb_intf_mode)
+			if (sde_encoder_in_clone_mode(enc))
 				continue;
 
 			sde_encoder_register_vblank_callback(enc, NULL, NULL);
@@ -5355,8 +5368,8 @@ static void _sde_crtc_reset(struct drm_crtc *crtc)
 	/* mark mixer cfgs dirty before wiping them */
 	sde_crtc_clear_cached_mixer_cfg(crtc);
 
-	memset(sde_crtc->mixers, 0, sizeof(sde_crtc->mixers));
 	sde_crtc->num_mixers = 0;
+	memset(sde_crtc->mixers, 0, sizeof(sde_crtc->mixers));
 	sde_crtc->mixers_swapped = false;
 
 	/* disable clk & bw control until clk & bw properties are set */
