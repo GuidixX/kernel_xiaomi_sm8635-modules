@@ -67,6 +67,8 @@ LINUX_INC +=	-I$(DISPLAY_ROOT) \
 	-I$(DISPLAY_ROOT)/include \
 	-I$(KERNEL_ROOT)/drivers/clk/qcom \
 	-I$(KERNEL_SRC)/drivers/clk/qcom \
+	-I$(KERNEL_ROOT)/kernel/irq \
+	-I$(KERNEL_SRC)/kernel/irq \
 	-I$(DISPLAY_ROOT)/include/linux \
 	-I$(DISPLAY_ROOT)/rotator \
 	-I$(DISPLAY_ROOT)/msm \
@@ -86,12 +88,20 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 	-Werror\
 	-D__linux__
 
+ifeq (1, $(strip $(CONFIG_DISPLAY_FACTORY_BUILD)))
+CDEFINES +=	-DDISPLAY_FACTORY_BUILD
+endif
+CDEFINES +=	-DMI_DISPLAY_MODIFY
 KBUILD_CPPFLAGS += $(CDEFINES)
 
 ccflags-y += $(LINUX_INC)
 
 ifeq ($(call cc-option-yn, -Wmaybe-uninitialized),y)
 EXTRA_CFLAGS += -Wmaybe-uninitialized
+endif
+
+ifneq (, $(filter $(word 2,$(subst _, ,$(TARGET_PRODUCT))), chenfeng))
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CHENFENG
 endif
 
 KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/sm8635-modules/qcom/opensource/display-drivers/hdcp/Module.symvers

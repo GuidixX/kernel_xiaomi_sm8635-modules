@@ -747,6 +747,10 @@ static void _sde_encoder_phys_wb_setup_ctl(struct sde_encoder_phys *phys_enc,
 	hw_cdm = phys_enc->hw_cdm;
 	hw_dnsc_blur = phys_enc->hw_dnsc_blur;
 	ctl = phys_enc->hw_ctl;
+#ifdef MI_DISPLAY_MODIFY
+	if (!ctl)
+		return;
+#endif
 	need_merge = !(_sde_encoder_is_single_lm_partial_update(wb_enc));
 
 	if (test_bit(SDE_CTL_ACTIVE_CFG, &ctl->caps->features) &&
@@ -1907,7 +1911,6 @@ static void _sde_encoder_phys_wb_frame_done_helper(void *arg, bool frame_error)
 
 		phys_enc->parent_ops.handle_frame_done(phys_enc->parent, phys_enc, event);
 	}
-
 	if (!in_clone_mode && phys_enc->parent_ops.handle_vblank_virt)
 		phys_enc->parent_ops.handle_vblank_virt(phys_enc->parent, phys_enc);
 
@@ -2224,6 +2227,7 @@ static int _sde_encoder_phys_wb_wait_for_idle(struct sde_encoder_phys *phys_enc,
 			phys_enc->in_clone_mode);
 		SDE_EVT32(DRMID(phys_enc->parent), WBID(wb_enc),
 			atomic_read(&phys_enc->pending_kickoff_cnt), SDE_EVTLOG_ERROR);
+		SDE_DBG_DUMP(SDE_DBG_BUILT_IN_ALL, "panic");
 		goto frame_done;
 	}
 
@@ -2314,6 +2318,7 @@ static int sde_encoder_phys_wb_wait_for_commit_done(struct sde_encoder_phys *phy
 					atomic_read(&phys_enc->pending_kickoff_cnt), is_idle, rc);
 			SDE_ERROR("[enc:%d, wb:%d] failed wait_for_idle; ret:%d\n",
 					DRMID(phys_enc->parent), WBID(wb_enc), rc);
+			SDE_DBG_DUMP(SDE_DBG_BUILT_IN_ALL, "panic");
 		}
 	}
 
