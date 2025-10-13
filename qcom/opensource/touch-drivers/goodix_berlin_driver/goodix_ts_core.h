@@ -473,6 +473,7 @@ struct goodix_ts_hw_ops {
 	int (*get_capacitance_data)(struct goodix_ts_core *cd,
 			struct ts_rawdata_info *info);
 	int (*switch_report_rate)(struct goodix_ts_core *cd, bool high);
+	int (*switch_edge_filter)(struct goodix_ts_core *cd, bool high);
 };
 
 /*
@@ -499,6 +500,11 @@ enum goodix_core_init_stage {
 struct goodix_ic_config {
 	int len;
 	u8 data[GOODIX_CFG_MAX_SIZE];
+};
+
+enum edge_filter_mode_t {
+	normal = 0,
+	game = 1,
 };
 
 struct goodix_ts_core {
@@ -569,6 +575,7 @@ struct goodix_ts_core {
 
 	bool nonui_enabled;
 	bool high_report_rate;
+	enum edge_filter_mode_t edge_filter;
 };
 
 /* external module structures */
