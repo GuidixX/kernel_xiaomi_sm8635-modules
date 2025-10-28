@@ -2484,6 +2484,8 @@ static int fts_get_mode_value(void *private, enum touch_mode mode)
         return (fts_data->gesture_status & GESTURE_SINGLETAP_EN) ? 1 : 0;
     case TOUCH_MODE_FOD_PRESS_GESTURE:
         return (fts_data->gesture_status & GESTURE_FOD_EN) ? 1 : 0;
+    case TOUCH_MODE_REPORT_RATE:
+        return fts_data->high_report_rate ? 1 : 0;
     default:
         return -EINVAL;
     }
