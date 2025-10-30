@@ -1,5 +1,5 @@
 modules:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS) VERBOSE=1
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
 modules_install:
 	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
 clean:
