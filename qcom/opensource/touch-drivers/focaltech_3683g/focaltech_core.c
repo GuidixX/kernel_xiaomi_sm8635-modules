@@ -2209,6 +2209,10 @@ static int fts_ts_resume(struct device *dev)
 		fts_switch_report_rate(ts_data, ts_data->high_report_rate);
 	}
 
+	if (ts_data->edge_filter) {
+		fts_switch_edge_filter(ts_data, ts_data->edge_filter);
+	}
+
 	notify_oneshot_sensor(ONESHOT_SENSOR_FOD_PRESS, 0);
 
 	FTS_FUNC_EXIT();
@@ -2462,6 +2466,42 @@ int fts_switch_report_rate(struct fts_ts_data *ts_data, bool enable)
 	return 0;
 }
 
+#define FTS_REG_EDGE_FILTER_EN              0x8C
+#define FTS_REG_EDGE_FILTER_LEVEL           0x8D
+int fts_switch_edge_filter(struct fts_ts_data *ts_data, bool high_filter)
+{
+	int ret;
+	u8 high_cmd[7] = {0xC1, 0x01, 0x1E, 0x01, 0x01, 0x01, 0x01};
+	u8 low_cmd[7] = {0xC1, 0x00, 0x03, 0x0A, 0x0A, 0x0A, 0x0A};
+
+	if (!ts_data) {
+		FTS_ERROR("fts_switch_edge_filter: ts_data is NULL");
+		return -EINVAL;
+	}
+
+	ret = fts_write_reg(FTS_REG_EDGE_FILTER_EN, 0);
+	if (ret < 0) {
+		FTS_ERROR("failed to disable edge filter enable register, ret=%d", ret);
+		return ret;
+	}
+
+	ret = fts_write_reg(FTS_REG_EDGE_FILTER_LEVEL, 0);
+	if (ret < 0) {
+		FTS_ERROR("failed to set edge filter level, ret=%d", ret);
+		return ret;
+	}
+
+	ret = fts_write(high_filter ? high_cmd : low_cmd, sizeof(high_cmd));
+	if (ret < 0) {
+		FTS_ERROR("failed to write edge filter command, ret=%d", ret);
+		return ret;
+	}
+
+	ts_data->edge_filter = high_filter;
+	FTS_INFO("edge_filter set to %s", high_filter ? "high" : "low");
+	return 0;
+}
+
 static void fts_update_gesture_state(struct fts_ts_data *ts_data, int bit, bool enable)
 {
 	mutex_lock(&ts_data->input_dev->mutex);
@@ -2508,6 +2548,7 @@ static int fts_set_cur_value(void *private, enum touch_mode mode, int value)
 		break;
 	case TOUCH_MODE_REPORT_RATE:
 		fts_switch_report_rate(fts_data, value != 0 ? true : false);
+		fts_switch_edge_filter(fts_data, value != 0 ? true : false);
 		break;
 	default:
 		FTS_ERROR("handler got mode %d with value %d, not implemented",
