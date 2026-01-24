@@ -15267,7 +15267,7 @@ static int __wlan_hdd_cfg80211_wifi_logger_start(struct wiphy *wiphy,
 	if (start_log.ring_id == RING_ID_WAKELOCK) {
 		/* Start/stop wakelock events */
 		if (start_log.verbose_level > WLAN_LOG_LEVEL_OFF)
-			cds_set_wakelock_logging(true);
+			cds_set_wakelock_logging(false);
 		else
 			cds_set_wakelock_logging(false);
 		return 0;
