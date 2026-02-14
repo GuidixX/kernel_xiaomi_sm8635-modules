@@ -12,6 +12,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/ftrace.h>
+#include <linux/moduleparam.h>
 #include <linux/mm.h>
 #include <linux/qcom_scm.h>
 #include <asm/cacheflush.h>
@@ -27,18 +28,29 @@ static DEFINE_SPINLOCK(suspend_lock);
  * FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR		        5000
+#define FLOOR		      3000
+
+/*
+   refactor floor macro for react fastert to short burts and frame-time spikes
+*/
 /*
  * MIN_BUSY is 1 msec for the sample to be sent
  */
-#define MIN_BUSY		1000
+/*
+ decrease MIN_BUSY to 700
+
+*/
+#define MIN_BUSY		700
 #define MAX_TZ_VERSION		0
 
 /*
  * CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
-#define CEILING			50000
+/*
+   change CEILING  macro value to 30msec to trigger the bust path earlier for sustained load
+*/
+#define CEILING			30000
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
@@ -58,7 +70,33 @@ static DEFINE_SPINLOCK(suspend_lock);
 
 static u64 suspend_time;
 static u64 suspend_start;
+static unsigned int downscale_streak;
 static unsigned long acc_total, acc_relative_busy;
+
+/*
+ * Performance tuning knobs:
+ * - perf_boost_pct: additional synthetic busy boost on top of mod_percent
+ * - perf_floor_level: keep frequency at least within top N pwrlevels
+ *   (0 means only turbo level, larger index means lower floor frequency)
+ * - perf_down_hysteresis: number of consecutive downscale recommendations
+ *   required before allowing a downclock.
+ */
+static unsigned int perf_boost_pct = 25;
+module_param(perf_boost_pct, uint, 0644);
+MODULE_PARM_DESC(perf_boost_pct, "Additional busy-time boost percentage for performance bias");
+
+static unsigned int perf_floor_level = 2;
+module_param(perf_floor_level, uint, 0644);
+MODULE_PARM_DESC(perf_floor_level, "Maximum allowed pwrlevel index to keep a performance floor");
+
+static unsigned int perf_down_hysteresis = 2;
+module_param(perf_down_hysteresis, uint, 0644);
+MODULE_PARM_DESC(perf_down_hysteresis, "Consecutive downscale decisions required before downclock");
+
+/*
+ * Returns GPU suspend time in millisecond.
+	return scnprintf(buf, PAGE_SIZE, "%u\n", priv->mod_percent);
+}
 
 /*
  * Returns GPU suspend time in millisecond.
@@ -150,16 +188,81 @@ static ssize_t mod_percent_show(struct device *dev,
 
 	return scnprintf(buf, PAGE_SIZE, "%u\n", priv->mod_percent);
 }
+static ssize_t perf_boost_pct_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	unsigned int val;
+	int ret = kstrtou32(buf, 0, &val);
+
+	if (ret)
+		return ret;
+
+	perf_boost_pct = clamp_t(u32, val, 0, 200);
+	return count;
+}
+
+static ssize_t perf_boost_pct_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%u\n", perf_boost_pct);
+}
+
+static ssize_t perf_floor_level_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	unsigned int val;
+	int ret = kstrtou32(buf, 0, &val);
+
+	if (ret)
+		return ret;
+
+	perf_floor_level = val;
+	return count;
+}
+
+static ssize_t perf_floor_level_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%u\n", perf_floor_level);
+}
+
+static ssize_t perf_down_hysteresis_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	unsigned int val;
+	int ret = kstrtou32(buf, 0, &val);
+
+	if (ret)
+		return ret;
+
+	perf_down_hysteresis = clamp_t(u32, val, 0, 10);
+	return count;
+}
+
+static ssize_t perf_down_hysteresis_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%u\n", perf_down_hysteresis);
+}
 
 static DEVICE_ATTR_RO(gpu_load);
 
 static DEVICE_ATTR_RO(suspend_time);
 static DEVICE_ATTR_RW(mod_percent);
+static DEVICE_ATTR_RW(perf_boost_pct);
+static DEVICE_ATTR_RW(perf_floor_level);
+static DEVICE_ATTR_RW(perf_down_hysteresis);
 
 static const struct device_attribute *adreno_tz_attr_list[] = {
 		&dev_attr_gpu_load,
 		&dev_attr_suspend_time,
 		&dev_attr_mod_percent,
+		&dev_attr_perf_boost_pct,
+		&dev_attr_perf_floor_level,
+		&dev_attr_perf_down_hysteresis,
 		NULL
 };
 
@@ -351,6 +454,8 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	int val, level = 0;
 	int context_count = 0;
 	u64 busy_time;
+	u64 scaled_busy;
+	unsigned int floor_level;
 
 	if (!priv)
 		return 0;
@@ -366,11 +471,25 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	priv->bin.total_time += stats->total_time;
 
 	/* Update gpu busy time as per mod_percent */
-	busy_time = stats->busy_time * priv->mod_percent;
-	do_div(busy_time, 100);
+	//busy_time = stats->busy_time * priv->mod_percent;
+	//do_div(busy_time, 100);
+	scaled_busy = stats->busy_time;
+	scaled_busy *= priv->mod_percent;
+	do_div(scaled_busy, 100);
+	scaled_busy *= (100 + clamp_t(u32, perf_boost_pct, 0, 200));
+	do_div(scaled_busy, 100);
+	busy_time = scaled_busy;
 
 	/* busy_time should not go over total_time */
 	stats->busy_time = min_t(u64, busy_time, stats->total_time);
+	if (val > 0 && perf_down_hysteresis) {
+		if (downscale_streak < perf_down_hysteresis) {
+			downscale_streak++;
+			val = 0;
+		}
+	} else if (val < 0) {
+		downscale_streak = 0;
+	}
 
 	priv->bin.busy_time += stats->busy_time;
 
@@ -422,6 +541,9 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 		level = min_t(int, level, devfreq->profile->max_state - 1);
 	}
 
+	floor_level = min_t(unsigned int, perf_floor_level,
+			devfreq->profile->max_state - 1);
+	level = min_t(int, level, floor_level);
 	*freq = devfreq->profile->freq_table[level];
 	return 0;
 }
@@ -506,6 +628,7 @@ static int tz_suspend(struct devfreq *devfreq)
 
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
+	downscale_streak = 0;
 	return 0;
 }
 

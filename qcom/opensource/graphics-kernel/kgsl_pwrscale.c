@@ -17,7 +17,7 @@ static struct devfreq_msm_adreno_tz_data adreno_tz_data = {
 		.max = 350,
 		.floating = true,
 	},
-	.mod_percent = 100,
+	.mod_percent = 125,
 };
 
 static void do_devfreq_suspend(struct work_struct *work);
@@ -710,7 +710,7 @@ int kgsl_pwrscale_init(struct kgsl_device *device, struct platform_device *pdev,
 	gpu_profile->profile.initial_freq =
 		pwr->pwrlevels[pwr->default_pwrlevel].gpu_freq;
 
-	gpu_profile->profile.polling_ms = 10;
+	gpu_profile->profile.polling_ms = 5;
 
 	pwrscale_of_ca_aware(device);
 
