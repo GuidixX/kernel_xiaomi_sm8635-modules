@@ -100,7 +100,7 @@ enum gmu_pwrctrl_mode {
 
 #define GMU_MAX_PWRLEVELS	2
 #define GMU_FREQ_MIN   200000000
-#define GMU_FREQ_MAX   500000000
+#define GMU_FREQ_MAX   600000000
 
 #define HFI_VERSION(major, minor, step) \
 	(FIELD_PREP(GENMASK(31, 28), major) | \
