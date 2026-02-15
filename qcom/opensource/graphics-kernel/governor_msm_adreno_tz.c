@@ -96,7 +96,7 @@ MODULE_PARM_DESC(perf_down_hysteresis, "Consecutive downscale decisions required
 /*
  * Returns GPU suspend time in millisecond.
 	return scnprintf(buf, PAGE_SIZE, "%u\n", priv->mod_percent);
-}
+}*/
 
 /*
  * Returns GPU suspend time in millisecond.
@@ -451,7 +451,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	int result = 0;
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
 	struct devfreq_dev_status *stats = &devfreq->last_status;
-	int val, level = 0;
+	int val = 0, level = 0;
 	int context_count = 0;
 	u64 busy_time;
 	u64 scaled_busy;
