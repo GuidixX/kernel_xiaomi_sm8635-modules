@@ -1490,16 +1490,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 	case SDE_MODE_DPMS_LP1:
 #ifdef MI_DISPLAY_MODIFY
 		display->panel->power_mode = power_mode;
-		if (mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PB ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PC ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PB) {
-			if (atomic_read(&display->vid_aod_wakelock_count) == 0) {
-				pm_wakeup_dev_event(&display->pdev->dev, 10 * 1000, true);
-				atomic_inc(&display->vid_aod_wakelock_count);
-			}
-		}
 #endif
 		rc = dsi_panel_set_lp1(display->panel);
 		break;
@@ -1511,15 +1501,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		break;
 	case SDE_MODE_DPMS_ON:
 #ifdef MI_DISPLAY_MODIFY
-		if (mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PB ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PC ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PB) {
-			if (atomic_add_unless(&display->vid_aod_wakelock_count, -1 , 0))
-				pm_relax(&display->pdev->dev);
-		}
-
 		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
 			(display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
 			rc = dsi_panel_set_nolp(display->panel);
@@ -1536,15 +1517,6 @@ int dsi_display_set_power(struct drm_connector *connector,
 		break;
 	case SDE_MODE_DPMS_OFF:
 #ifdef MI_DISPLAY_MODIFY
-		if (mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PB ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PC ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PA ||
-			mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PB) {
-			if (atomic_add_unless(&display->vid_aod_wakelock_count, -1 , 0))
-				pm_relax(&display->pdev->dev);
-		}
-
 		if (mi_disp_lhbm_fod_enabled(display->panel))
 			mi_disp_lhbm_fod_allow_tx_lhbm(display, false);
 		mi_disp_feature_event_notify_by_type(mi_get_disp_id(display->display_type),
@@ -6392,17 +6364,6 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 		if (rc)
 			goto end;
 	}
-
-#ifdef MI_DISPLAY_MODIFY
-	if (mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PA ||
-		mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PB ||
-		mi_get_panel_id_by_dsi_panel(display->panel) == N16T_PANEL_PC ||
-		mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PA ||
-		mi_get_panel_id_by_dsi_panel(display->panel) == O16U_PANEL_PB) {
-		atomic_set(&display->vid_aod_wakelock_count, 0);
-		device_init_wakeup(&display->pdev->dev, true);
-	}
-#endif
 
 	return 0;
 end:
