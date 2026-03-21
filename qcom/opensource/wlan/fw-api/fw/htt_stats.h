@@ -850,6 +850,14 @@ enum htt_dbg_ext_stats_type {
      */
     HTT_DBG_EXT_STATS_HDS_PROF = 76,
 
+    /** HTT_DBG_EXT_STATS_OPTIONAL_CONFIGS
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_stats_optional_configs_tlv
+     */
+    HTT_DBG_EXT_STATS_OPTIONAL_CONFIGS = 77,
+
 
     /* keep this last */
     HTT_DBG_NUM_EXT_STATS = 256,
@@ -3549,6 +3557,9 @@ typedef struct {
      */
     A_UINT32 smart_basic_trig_sch_histogram[HTT_MAX_NUM_SBT_INTR];
     A_UINT32 ru_alloc_mode_cnt[HTT_RU_ALLOC_NUM_MODES];
+    A_UINT32 mu_bar_pipeline_seq_cnt;
+    A_UINT32 mu_bar_pipeline_resume_cnt;
+    A_UINT32 mu_bar_pipeline_resume_fail_cnt;
 } htt_stats_tx_selfgen_cmn_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_tx_selfgen_cmn_stats_tlv htt_tx_selfgen_cmn_stats_tlv;
@@ -6599,6 +6610,7 @@ typedef struct {
 
 #define HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
 #define HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS 2 /* 12, 13 */
+#define HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS_EXT 14 /* 0-13 */
 #define HTT_TX_PDEV_STATS_NUM_EXTRA2_MCS_COUNTERS 2 /* 14, 15 */
 #define HTT_TX_PDEV_STATS_NUM_EXTRA3_MCS_COUNTERS 4 /* 1.1, 3.1, 4.1, 7.1 */
 #define HTT_TX_PDEV_STATS_NUM_GI_COUNTERS 4
@@ -6891,11 +6903,19 @@ typedef struct {
     A_UINT32 npca_tx_su_punctured_mode[HTT_TX_PDEV_STATS_NUM_PUNCTURED_MODE_COUNTERS];
     /* STA side trigger stats */
     A_UINT32 trigger_type_11bn[HTT_TX_PDEV_STATS_NUM_11BN_TRIGGER_TYPES];
+#if 0
+    /* NOTE:
+     * The tx_mcs_ext_3 field is being reverted at least temporarily,
+     * to work around message size limits in certain targets.
+     * If/when this revert becomes permanent, this "#if 0" block will
+     * be removed altogether.
+     */
     /* Stats for iMCS 1.1, 3.1, 4.1, 7.1 */
     A_UINT32 tx_mcs_ext_3[HTT_TX_PDEV_STATS_NUM_EXTRA3_MCS_COUNTERS];
+#endif
 
 /*
- * NOTE: THIS STRUCT HAS ONLY 4 BYTES OF SPACE LEFT
+ * NOTE: THIS STRUCT HAS ONLY 20 BYTES OF SPACE LEFT
  * WITHIN THE TARGET'S HTT_STATS_TLV_MAX_LEN SIZE LIMIT.
  */
 } htt_stats_tx_pdev_rate_stats_tlv;
@@ -11949,6 +11969,84 @@ typedef struct {
     (((word) & 0xff000000) >> 24)
 #define HTT_STATS_HDS_PROF_SW_PROFILE_SET(word, value) \
     ((word) |= (((value) << 24) & 0xff000000))
+
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    union {
+        A_UINT32 flags;
+        struct {
+             /*
+              * bit 0: Dynamic ED CCA status flag
+              * bit 1: LPI status flag
+              * bit 2: Green Tx status flag
+              * bit 3: ANI status flag
+              * bit 4: Static ANI status flag
+              * bit 5: ANN Powerboost status flag
+              * bit 6: EANI status flag
+              * bit 7: Spur Mitigation status flag
+              * bit 8: Multigain RSSI status flag
+              */
+             A_UINT32
+                 is_dyn_cca_enabled:        1, /* bit 0 */
+                 is_lpi_enabled:            1, /* bit 1 */
+                 is_gtx_enabled:            1, /* bit 2 */
+                 is_ani_enabled:            1, /* bit 3 */
+                 is_static_ani_enabled:     1, /* bit 4 */
+                 is_ann_pbt_enabled:        1, /* bit 5 */
+                 is_e_ani_enabled:          1, /* bit 6 */
+                 is_spur_mit_enabled:       1, /* bit 7 */
+                 is_multigain_rssi_enabled: 1, /* bit 8 */
+
+                 reserved: 23; /* bits 31:9 */
+        };
+    };
+} htt_stats_optional_configs_tlv;
+
+#define HTT_STATS_OPT_CONF_GET_DYN_CCA(word) \
+    (((word) & 0x1) >> 0)
+#define HTT_STATS_OPT_CONF_SET_DYN_CCA(word, value) \
+    ((word) = ((word) & ~0x1) | (((value) & 0x1) << 0))
+
+#define HTT_STATS_OPT_CONF_GET_LPI(word) \
+    (((word) & 0x2) >> 1)
+#define HTT_STATS_OPT_CONF_SET_LPI(word, value) \
+    ((word) = ((word) & ~0x2) | (((value) & 0x1) << 1))
+
+#define HTT_STATS_OPT_CONF_GET_GTX(word) \
+    (((word) & 0x4) >> 2)
+#define HTT_STATS_OPT_CONF_SET_GTX(word, value) \
+    ((word) = ((word) & ~0x4) | (((value) & 0x1) << 2))
+
+#define HTT_STATS_OPT_CONF_GET_ANI(word) \
+    (((word) & 0x8) >> 3)
+#define HTT_STATS_OPT_CONF_SET_ANI(word, value) \
+    ((word) = ((word) & ~0x8) | (((value) & 0x1) << 3))
+
+#define HTT_STATS_OPT_CONF_GET_STATIC_ANI(word) \
+    (((word) & 0x10) >> 4)
+#define HTT_STATS_OPT_CONF_SET_STATIC_ANI(word, value) \
+    ((word) = ((word) & ~0x10) | (((value) & 0x1) << 4))
+
+#define HTT_STATS_OPT_CONF_GET_ANN_PBT(word) \
+    (((word) & 0x20) >> 5)
+#define HTT_STATS_OPT_CONF_SET_ANN_PBT(word, value) \
+    ((word) = ((word) & ~0x20) | (((value) & 0x1) << 5))
+
+#define HTT_STATS_OPT_CONF_GET_EANI(word) \
+    (((word) & 0x40) >> 6)
+#define HTT_STATS_OPT_CONF_SET_EANI(word, value) \
+    ((word) = ((word) & ~0x40) | (((value) & 0x1) << 6))
+
+#define HTT_STATS_OPT_CONF_GET_SPUR_MIT(word) \
+    (((word) & 0x80) >> 7)
+#define HTT_STATS_OPT_CONF_SET_SPUR_MIT(word, value) \
+    ((word) = ((word) & ~0x80) | (((value) & 0x1) << 7))
+
+#define HTT_STATS_OPT_CONF_GET_MULTIGAIN_RSSI(word) \
+    (((word) & 0x100) >> 8)
+#define HTT_STATS_OPT_CONF_SET_MULTIGAIN_RSSI(word, value) \
+    ((word) = ((word) & ~0x100) | (((value) & 0x1) << 8))
 
 
 typedef struct {
