@@ -3,4 +3,18 @@
 # Makefile for mi dump display
 #
 
-obj-$(CONFIG_MI_DUMP_DISPLAY) += dump_display.o
+all: modules
+
+modules:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+
+%:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) $@ $(KBUILD_OPTIONS)
+
+obj-m += dump_display.o

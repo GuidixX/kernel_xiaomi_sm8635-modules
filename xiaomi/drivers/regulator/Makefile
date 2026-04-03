@@ -1,3 +1,17 @@
 # SPDX-License-Identifier: GPL-2.0
 
-obj-$(CONFIG_REGULATOR_WL2866D) += wl2866d.o
+all: modules
+
+modules:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+
+%:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) $@ $(KBUILD_OPTIONS)
+
+obj-m += wl2866d.o

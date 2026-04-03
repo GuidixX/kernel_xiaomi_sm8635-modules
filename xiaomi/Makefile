@@ -1,4 +1,4 @@
-all: modules
+M=$(PWD)all: modules
 
 modules:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)

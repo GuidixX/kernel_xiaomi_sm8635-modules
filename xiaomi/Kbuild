@@ -1,6 +1,6 @@
-obj-$(CONFIG_XLOGCHAR) += drivers/char/
-obj-$(CONFIG_MI_DUMP_DISPLAY) += drivers/xiaomi/dump_display/
-obj-$(CONFIG_INPUT_AW86927_HAPTIC) += drivers/input/misc/aw86927_haptic/
-obj-$(CONFIG_SIH_VIBRATOR) += drivers/input/misc/si_haptic/
-obj-$(CONFIG_MI_THERMAL_INTERFACE) += drivers/thermal/xiaomi/
-obj-$(CONFIG_REGULATOR_WL2866D) += drivers/regulator/
+obj-$(if $(filter m,$(CONFIG_XLOGCHAR)),m) += drivers/char/
+obj-$(if $(filter m,$(CONFIG_MI_DUMP_DISPLAY)),m) += drivers/xiaomi/dump_display/
+obj-$(if $(filter m,$(CONFIG_INPUT_AW86927_HAPTIC)),m) += drivers/input/misc/aw86927_haptic/
+obj-$(if $(filter m,$(CONFIG_SIH_VIBRATOR)),m) += drivers/input/misc/si_haptic/
+obj-$(if $(filter m,$(CONFIG_MI_THERMAL_INTERFACE)),m) += drivers/thermal/xiaomi/
+obj-$(if $(filter m,$(CONFIG_REGULATOR_WL2866D)),m) += drivers/regulator/
