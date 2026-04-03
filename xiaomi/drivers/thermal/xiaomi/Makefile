@@ -18,4 +18,6 @@ clean:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) $@ $(KBUILD_OPTIONS)
 
 #xiaomi thermal control interface
+ccflags-y += -I$(srctree)/drivers/base/
+ccflags-y += -I$(srctree)/drivers/thermal/
 obj-m	+= mi_thermal_interface.o

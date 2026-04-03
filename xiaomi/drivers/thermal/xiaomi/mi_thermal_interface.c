@@ -19,9 +19,9 @@
 #include <linux/kernfs.h>
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
-#include "../../base/base.h"
 
-#include "../thermal_core.h"
+#include "base.h"
+#include "thermal_core.h"
 
 #if defined(CONFIG_DRM_PANEL)
 static struct drm_panel *prim_panel;
