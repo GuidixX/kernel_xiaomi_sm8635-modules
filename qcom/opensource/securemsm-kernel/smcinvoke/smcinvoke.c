@@ -2689,7 +2689,7 @@ start_waiting_for_requests:
 	 * callback req to process.
 	 */
 	do {
-		ret = wait_event_interruptible(server_info->req_wait_q,
+		ret = wait_event_freezable(server_info->req_wait_q,
 				!hash_empty(server_info->reqs_table));
 		if (ret) {
 			trace_process_accept_req_ret(current->pid, current->tgid, ret);
