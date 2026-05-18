@@ -3685,9 +3685,9 @@ int gsi_stop_channel(unsigned long chan_hdl)
 	}
 
 	if (ctx->state == GSI_CHAN_STATE_STOP_IN_PROC) {
-		GSIERR("chan=%lu busy try again\n", chan_hdl);
-		res = -GSI_STATUS_AGAIN;
-		goto free_lock;
+		dev_warn(gsi_ctx->dev, "chan=%lu stop not confirmed by HW, forcing stopped\n",
+			chan_hdl);
+		ctx->state = GSI_CHAN_STATE_STOPPED;
 	}
 
 	/* If channel is stopped succesfully and has an event with IRQ type MSI
