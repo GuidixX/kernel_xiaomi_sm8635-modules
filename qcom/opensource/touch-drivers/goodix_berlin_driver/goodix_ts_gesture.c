@@ -326,7 +326,7 @@ static int gsx_gesture_before_suspend(struct goodix_ts_core *cd,
 		ts_info("enter gesture mode, type[0x%02X]", cd->gesture_type);
 
 	hw_ops->irq_enable(cd, true);
-	enable_irq_wake(cd->irq);
+	goodix_ts_set_irq_wake(cd, true);
 
 	return EVT_CANCEL_SUSPEND;
 }
@@ -336,10 +336,17 @@ static int gsx_gesture_before_resume(struct goodix_ts_core *cd,
 {
 	const struct goodix_ts_hw_ops *hw_ops = cd->hw_ops;
 
+	/*
+	 * The wake reference is released by goodix_ts_resume() before this
+	 * hook runs: it can be taken by either before_suspend() or the gesture
+	 * work, and gesture_type here is not necessarily the value that was in
+	 * effect when it was taken - userspace can toggle gestures over sysfs
+	 * while the panel is off. Deciding it here either drops a reference we
+	 * never took ("Unbalanced IRQ wake disable") or leaks one.
+	 */
 	if (cd->gesture_type == 0)
 		return EVT_CONTINUE;
 
-	disable_irq_wake(cd->irq);
 	hw_ops->reset(cd, GOODIX_NORMAL_RESET_DELAY_MS);
 
 	return EVT_CANCEL_RESUME;

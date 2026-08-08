@@ -1819,6 +1819,29 @@ static void goodix_ts_release_connects(struct goodix_ts_core *core_data)
 }
 
 /**
+ * goodix_ts_set_irq_wake - arm/disarm the touch irq as a system wake source
+ *
+ * enable_irq_wake()/disable_irq_wake() keep their own depth counter and warn
+ * on underflow, so only call into them on a real state change. ->irq_lock is
+ * the same lock the enable/disable path uses; every caller (suspend/resume
+ * work, gesture work, module hooks, remove) is process context.
+ */
+void goodix_ts_set_irq_wake(struct goodix_ts_core *cd, bool enable)
+{
+	mutex_lock(&cd->irq_lock);
+
+	if (enable && !cd->irq_wake_enabled) {
+		enable_irq_wake(cd->irq);
+		cd->irq_wake_enabled = true;
+	} else if (!enable && cd->irq_wake_enabled) {
+		disable_irq_wake(cd->irq);
+		cd->irq_wake_enabled = false;
+	}
+
+	mutex_unlock(&cd->irq_lock);
+}
+
+/**
  * goodix_ts_suspend - Touchscreen suspend function
  * Called by PM/FB/EARLYSUSPEN module to put the device to  sleep
  */
@@ -1914,9 +1937,23 @@ static int goodix_ts_resume(struct goodix_ts_core *core_data)
 
 	ts_info("Resume start");
 	atomic_set(&core_data->suspended, 0);
-	hw_ops->irq_enable(core_data, false);
 
+	/*
+	 * Flush the gesture work before touching the irq. It also calls
+	 * irq_enable(), and its only guard is an atomic_read() of ->suspended
+	 * that it may already have passed, so cancelling afterwards leaves a
+	 * window where both paths drive the irq at once.
+	 */
 	cancel_delayed_work_sync(&core_data->gesture_work);
+
+	/*
+	 * Drop the wake reference here rather than in the gesture module, so
+	 * it is released on every resume regardless of which path took it and
+	 * of whether the module is registered at all.
+	 */
+	goodix_ts_set_irq_wake(core_data, false);
+
+	hw_ops->irq_enable(core_data, false);
 
 	mutex_lock(&goodix_modules.mutex);
 	if (!list_empty(&goodix_modules.head)) {
@@ -2004,6 +2041,7 @@ static void goodix_set_gesture_work(struct work_struct *work)
 
 	if (target_gesture_type == 0) {
 		hw_ops->irq_enable(core_data, false);
+		goodix_ts_set_irq_wake(core_data, false);
 		hw_ops->gesture(core_data, 0);
 		goto exit;
 	}
@@ -2022,6 +2060,16 @@ static void goodix_set_gesture_work(struct work_struct *work)
 		ts_err("enter gesture mode");
 	}
 	hw_ops->irq_enable(core_data, true);
+	/*
+	 * The panel is already off, so nothing else will arm the touch irq as
+	 * a wake source for us: gsx_gesture_before_suspend() only does that
+	 * when gestures were already enabled at blank time. Reaching here
+	 * means gesture mode is being (re)established while suspended - after
+	 * userspace enabled a gesture late, or after nonui mode cleared - so
+	 * take the wake reference here too, or the irq fires but never
+	 * resumes the AP.
+	 */
+	goodix_ts_set_irq_wake(core_data, true);
 
 exit:
 	pm_relax(core_data->bus->dev);
@@ -2251,6 +2299,7 @@ int goodix_ts_stage2_init(struct goodix_ts_core *cd)
 			goto err_finger;
 		}
 	}
+
 #ifdef CONFIG_ARCH_QTI_VM
 		goto skip_goodix_ts_irq_setup;
 #endif
@@ -2756,6 +2805,15 @@ static int goodix_ts_probe(struct platform_device *pdev)
 
 	core_data->bus = bus_interface;
 
+	/*
+	 * Both the irq enable/disable path and the wake-source refcount take
+	 * this. qts_client_register() below can call back into
+	 * goodix_ts_enable_touch_irq() before stage2 init runs, so it has to be
+	 * live this early.
+	 */
+	mutex_init(&core_data->irq_lock);
+	core_data->irq_wake_enabled = false;
+
 	if (IS_ENABLED(CONFIG_OF) && bus_interface->dev->of_node) {
 		/* parse devicetree property */
 		ret = goodix_parse_dt(node, &core_data->board_data);
@@ -2870,6 +2928,7 @@ static int goodix_ts_remove(struct platform_device *pdev)
 	#endif
 		inspect_module_exit();
 		hw_ops->irq_enable(core_data, false);
+		goodix_ts_set_irq_wake(core_data, false);
 
 	#if defined(CONFIG_DRM)
 		if (core_data->notifier_cookie)

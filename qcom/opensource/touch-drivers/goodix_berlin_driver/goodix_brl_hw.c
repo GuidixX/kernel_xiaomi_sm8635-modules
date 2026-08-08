@@ -449,17 +449,32 @@ static int brl_reset(struct goodix_ts_core *cd, int delay)
 
 static int brl_irq_enbale(struct goodix_ts_core *cd, bool enable)
 {
+	/*
+	 * The cmpxchg only publishes the new state; it does not keep a second
+	 * caller from reaching enable_irq()/disable_irq_nosync() out of order.
+	 * Two threads flipping the same way (e.g. the gesture work re-arming
+	 * the irq while resume is disabling it) could both win their cmpxchg
+	 * and then hit the irq core in the wrong sequence, which is what
+	 * "Unbalanced enable for IRQ" reports. Serialise the whole
+	 * test-and-apply so the atomic state and the irq depth stay in step.
+	 */
+	mutex_lock(&cd->irq_lock);
+
 	if (enable && !atomic_cmpxchg(&cd->irq_enabled, 0, 1)) {
 		enable_irq(cd->irq);
 		ts_debug("Irq enabled");
+		mutex_unlock(&cd->irq_lock);
 		return 0;
 	}
 
 	if (!enable && atomic_cmpxchg(&cd->irq_enabled, 1, 0)) {
 		disable_irq_nosync(cd->irq);
 		ts_debug("Irq disabled");
+		mutex_unlock(&cd->irq_lock);
 		return 0;
 	}
+
+	mutex_unlock(&cd->irq_lock);
 	ts_info("warning: irq depth imbalance!");
 	return 0;
 }

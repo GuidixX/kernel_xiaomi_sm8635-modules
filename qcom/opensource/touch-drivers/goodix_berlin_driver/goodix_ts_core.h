@@ -531,6 +531,14 @@ struct goodix_ts_core {
 	size_t irq_trig_cnt;
 
 	atomic_t irq_enabled;
+	/*
+	 * Serializes irq_enabled against the actual enable_irq/disable_irq,
+	 * and irq_wake_enabled against enable_irq_wake/disable_irq_wake.
+	 * Initialized in probe, before anything can reach the irq.
+	 */
+	struct mutex irq_lock;
+	/* true while enable_irq_wake() is outstanding on cd->irq */
+	bool irq_wake_enabled;
 	atomic_t suspended;
 	/* when this flag is true, driver should not clean the sync flag */
 	bool tools_ctrl_sync;
@@ -707,6 +715,7 @@ int goodix_unregister_ext_module(struct goodix_ext_module *module);
  * return 0 on success, otherwise return < 0
  */
 int goodix_ts_blocking_notify(enum ts_notify_event evt, void *v);
+void goodix_ts_set_irq_wake(struct goodix_ts_core *cd, bool enable);
 struct kobj_type *goodix_get_default_ktype(void);
 struct kobject *goodix_get_default_kobj(void);
 
