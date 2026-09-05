@@ -23,7 +23,7 @@
   pr_info("[Awinic][%s]%s: " format "\n", dev_name(dev), __func__,             \
           ##__VA_ARGS__)
 #define aw_dev_dbg(dev, format, ...)                                           \
-  pr_debug("[Awinic][%s]%s: " format "\n", dev_name(dev), __func__,            \
+  no_printk("[Awinic][%s]%s: " format "\n", dev_name(dev), __func__,            \
            ##__VA_ARGS__)
 
 #define aw_pr_err(format, ...)                                                 \
@@ -31,6 +31,6 @@
 #define aw_pr_info(format, ...)                                                \
   pr_info("[Awinic]%s: " format "\n", __func__, ##__VA_ARGS__)
 #define aw_pr_dbg(format, ...)                                                 \
-  pr_debug("[Awinic]%s: " format "\n", __func__, ##__VA_ARGS__)
+  no_printk("[Awinic]%s: " format "\n", __func__, ##__VA_ARGS__)
 
 #endif

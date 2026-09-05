@@ -44,7 +44,7 @@
 #define DEBUG_LOG_LEVEL
 #ifdef DEBUG_LOG_LEVEL
 #define DBG(fmt, arg...)                                                       \
-  pr_debug("AWINIC_BIN %s,line= %d," fmt, __func__, __LINE__, ##arg)
+  no_printk("AWINIC_BIN %s,line= %d," fmt, __func__, __LINE__, ##arg)
 #define DBG_ERR(fmt, arg...)                                                   \
   pr_err("AWINIC_BIN_ERR %s,line= %d," fmt, __func__, __LINE__, ##arg)
 #else
