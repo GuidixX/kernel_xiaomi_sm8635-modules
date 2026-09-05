@@ -71,18 +71,18 @@ static void xm_hap_driver_exception_handler(int exception_code, ...)
 					      va_arg(args, char *));
 		break;
 	default:
-		pr_err("%s: exception code %d not found", __func__,
+		no_printk("%s: exception code %d not found", __func__,
 		       exception_code);
 		break;
 	}
 	va_end(args);
 	SEND_EVENT_AND_RELEASE(event);
 #endif
-	pr_info("%s: exception code %d", __func__, exception_code);
+	no_printk("%s: exception code %d", __func__, exception_code);
 }
 static void xm_hap_driver_init(bool enable)
 {
 	xm_hap_exception_enable = enable;
-	pr_info("%s: TODO.", __func__);
+	no_printk("%s: TODO.", __func__);
 }
 #endif

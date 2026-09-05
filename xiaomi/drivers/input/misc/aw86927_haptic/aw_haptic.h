@@ -12,11 +12,11 @@
 /********************************************
  * print information control
  *******************************************/
-#define aw_err(format, ...) pr_err("[awinic_haptic]" format, ##__VA_ARGS__)
+#define aw_err(format, ...) no_printk("[awinic_haptic]" format, ##__VA_ARGS__)
 
-#define aw_info(format, ...) pr_info("[awinic_haptic]" format, ##__VA_ARGS__)
+#define aw_info(format, ...) no_printk("[awinic_haptic]" format, ##__VA_ARGS__)
 
-#define aw_dbg(format, ...) pr_debug("[awinic_haptic]" format, ##__VA_ARGS__)
+#define aw_dbg(format, ...) no_printk("[awinic_haptic]" format, ##__VA_ARGS__)
 
 /*********************************************************
 *

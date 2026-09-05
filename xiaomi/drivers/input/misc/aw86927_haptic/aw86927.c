@@ -4129,7 +4129,7 @@ static void aw86927_rtp_work_routine(struct work_struct *work)
 					vmalloc((aw86927->ram.base_addr >> 2) +
 						sizeof(int));
 			} else {
-				pr_err("ram update not done yet, return !");
+				no_printk("ram update not done yet, return !");
 			}
 			if (!aw86927_rtp) {
 				aw_err("%s: error allocating memory\n",
