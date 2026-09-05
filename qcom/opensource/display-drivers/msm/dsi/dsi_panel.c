@@ -855,6 +855,12 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 #endif
 	struct dsi_backlight_config *bl = &panel->bl_config;
 
+	/* Keep hardware brightness at maximum while HBM is active. */
+	if (panel->hbm_enabled) {
+		bl_lvl = bl->bl_max_level;
+		bl->bl_level = bl_lvl;
+	}
+
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 #ifdef MI_DISPLAY_MODIFY
