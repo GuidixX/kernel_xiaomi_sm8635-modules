@@ -1108,11 +1108,11 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			if (is_pre_commit || elapsed_us > 1000) {
 				if (old_mode_info.ddic_mode == DDIC_MODE_NORMAL &&
 					new_mode_info.ddic_mode == DDIC_MODE_NORMAL) {
-					DISP_TIME_INFO("%s early_trigger:%d (power mode %d->%d, fps %d->%d) - %d.%d(ms)\n",
+					no_printk("%s early_trigger:%d (power mode %d->%d, fps %d->%d) - %d.%d(ms)\n",
 						c_conn->name, is_pre_commit, old_mode, new_mode,
 						old_fps, new_fps, (int)(elapsed_us / 1000), (int)(elapsed_us % 1000));
 				} else {
-					DISP_TIME_INFO("%s early_trigger:%d (power mode %d->%d, fps %d@%s@%d:%d->%d@%s@%d:%d) - %d.%d(ms)\n",
+					no_printk("%s early_trigger:%d (power mode %d->%d, fps %d@%s@%d:%d->%d@%s@%d:%d) - %d.%d(ms)\n",
 						c_conn->name, is_pre_commit, old_mode, new_mode,
 						old_fps, get_ddic_mode_name(old_mode_info.ddic_mode),
 						old_mode_info.sf_refresh_rate, old_mode_info.ddic_min_refresh_rate,

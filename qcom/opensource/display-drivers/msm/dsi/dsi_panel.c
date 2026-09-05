@@ -6816,7 +6816,7 @@ int dsi_panel_gamma_switch_locked(struct dsi_panel *panel)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_MI_FPS_GAMMA cmds, rc=%d\n",
 				panel->name, rc);
 
-	DISP_TIME_INFO("%s panel: success to switch fps gamma(%d->%d) \n",
+	no_printk("%s panel: success to switch fps gamma(%d->%d) \n",
 					panel->type, panel->mi_cfg.last_refresh_rate,
 					panel->cur_mode->timing.refresh_rate);
 	panel->mi_cfg.last_refresh_rate = panel->cur_mode->timing.refresh_rate;
