@@ -283,6 +283,8 @@ struct dsi_panel {
 	bool poms_align_vsync;
 
 	struct dsi_dfps_capabilities dfps_caps;
+	/* Internal DFPS mode selected only while the connector is in LP1/LP2. */
+	u32 aod_refresh_rate;
 	struct dsi_dyn_clk_caps dyn_clk_caps;
 	struct dsi_panel_phy_props phy_props;
 	bool dsc_switch_supported;

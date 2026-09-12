@@ -461,6 +461,62 @@ static void dsi_bridge_mode_set(struct drm_bridge *bridge,
 	DSI_DEBUG("clk_rate: %llu\n", c_bridge->dsi_mode.timing.clk_rate_hz);
 }
 
+static bool dsi_connector_in_aod(struct drm_connector_state *state)
+{
+	u64 lp = sde_connector_get_property(state, CONNECTOR_PROP_LP);
+
+	return lp == SDE_MODE_DPMS_LP1 || lp == SDE_MODE_DPMS_LP2;
+}
+
+int dsi_connector_atomic_check(struct drm_connector *connector, void *data,
+		struct drm_atomic_state *state)
+{
+	struct dsi_display *display = data;
+	struct drm_connector_state *old_state, *new_state;
+	struct drm_crtc_state *crtc_state;
+
+	if (!display || !display->panel || !display->panel->aod_refresh_rate)
+		return 0;
+
+	old_state = drm_atomic_get_old_connector_state(state, connector);
+	new_state = drm_atomic_get_new_connector_state(state, connector);
+	if (!old_state || !new_state || !new_state->crtc)
+		return 0;
+
+	if (dsi_connector_in_aod(old_state) == dsi_connector_in_aod(new_state))
+		return 0;
+
+	crtc_state = drm_atomic_get_crtc_state(state, new_state->crtc);
+	if (IS_ERR(crtc_state))
+		return PTR_ERR(crtc_state);
+
+	/* Run bridge fixup even when userspace keeps the same mode at AOD entry. */
+	crtc_state->mode_changed = true;
+	return 0;
+}
+
+static struct dsi_display_mode *dsi_drm_find_aod_mode(struct dsi_display *display,
+		const struct dsi_display_mode *normal_mode)
+{
+	struct dsi_display_mode *mode;
+	u32 i;
+
+	for (i = 0; i < display->panel->num_display_modes; i++) {
+		mode = &display->modes[i];
+		if (!mode->priv_info || !normal_mode->priv_info)
+			continue;
+		if (mode->timing.refresh_rate == display->panel->aod_refresh_rate &&
+			mode->timing.h_active == normal_mode->timing.h_active &&
+			mode->timing.v_active == normal_mode->timing.v_active &&
+			mode->panel_mode_caps == normal_mode->panel_mode_caps &&
+			mode->pixel_format_caps == normal_mode->pixel_format_caps &&
+			mode->priv_info->dsc_enabled == normal_mode->priv_info->dsc_enabled)
+			return mode;
+	}
+
+	return NULL;
+}
+
 static bool _dsi_bridge_mode_validate_and_fixup(struct drm_bridge *bridge,
 		struct drm_crtc_state *crtc_state, struct dsi_display *display,
 		struct dsi_display_mode *adj_mode)
@@ -470,11 +526,17 @@ static bool _dsi_bridge_mode_validate_and_fixup(struct drm_bridge *bridge,
 	struct dsi_display_mode cur_dsi_mode;
 	struct sde_connector_state *old_conn_state;
 	struct drm_display_mode *cur_mode;
+	struct drm_display_mode current_drm_mode;
 
 	if (!bridge->encoder || !bridge->encoder->crtc || !crtc_state->crtc)
 		return 0;
 
-	cur_mode = &crtc_state->crtc->state->mode;
+	if (display->panel->aod_refresh_rate && display->panel->cur_mode) {
+		dsi_convert_to_drm_mode(display->panel->cur_mode, &current_drm_mode);
+		cur_mode = &current_drm_mode;
+	} else {
+		cur_mode = &crtc_state->crtc->state->mode;
+	}
 	old_conn_state = to_sde_connector_state(display->drm_conn->state);
 
 	convert_to_dsi_mode(cur_mode, &cur_dsi_mode);
@@ -598,6 +660,22 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 	if (rc)
 		return rc;
 
+	if (display->panel->aod_refresh_rate) {
+		/* The AOD timing is internal; userspace must request a normal mode. */
+		if (dsi_mode.timing.refresh_rate == display->panel->aod_refresh_rate &&
+			!dsi_connector_in_aod(drm_conn_state))
+			return false;
+
+		if (dsi_connector_in_aod(drm_conn_state)) {
+			panel_dsi_mode = dsi_drm_find_aod_mode(display, panel_dsi_mode);
+			if (!panel_dsi_mode) {
+				DSI_ERR("[%s] no matching AOD mode\n", display->name);
+				return false;
+			}
+			dsi_mode = *panel_dsi_mode;
+		}
+	}
+
 	/* propagate the private info to the adjusted_mode derived dsi mode */
 	dsi_mode.priv_info = panel_dsi_mode->priv_info;
 	dsi_mode.dsi_mode_flags = panel_dsi_mode->dsi_mode_flags;
@@ -633,6 +711,9 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 		DSI_ERR("[%s] failed to validate dsi bridge mode.\n", display->name);
 		return false;
 	}
+
+	if (display->panel->aod_refresh_rate && crtc_state->active_changed)
+		dsi_mode.dsi_mode_flags &= ~DSI_MODE_FLAG_VRR;
 
 	/* Reject seamless transition when active changed */
 	if (crtc_state->active_changed &&
@@ -1161,13 +1242,12 @@ static int dsi_drm_update_edid_name(struct edid *edid, const char *name)
 }
 
 static void dsi_drm_update_dtd(struct edid *edid,
-		struct dsi_display_mode *modes, u32 modes_count)
+		struct dsi_display_mode *modes, u32 modes_count, u32 aod_refresh_rate)
 {
-	u32 i;
-	u32 count = min_t(u32, modes_count, 3);
+	u32 i, count = 0;
 
-	for (i = 0; i < count; i++) {
-		struct detailed_timing *dtd = &edid->detailed_timings[i];
+	for (i = 0; i < modes_count && count < 3; i++) {
+		struct detailed_timing *dtd = &edid->detailed_timings[count];
 		struct dsi_display_mode *mode = &modes[i];
 		struct dsi_mode_info *timing = &mode->timing;
 		struct detailed_pixel_timing *pd = &dtd->data.pixel_data;
@@ -1176,6 +1256,10 @@ static void dsi_drm_update_dtd(struct edid *edid,
 		u32 v_blank = timing->v_front_porch + timing->v_sync_width +
 				timing->v_back_porch;
 		u32 h_img = 0, v_img = 0;
+
+		if (timing->refresh_rate == aod_refresh_rate)
+			continue;
+		count++;
 
 		dtd->pixel_clock = mode->pixel_clk_khz / 10;
 
@@ -1227,7 +1311,7 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 		const struct msm_resource_caps_info *avail_res)
 {
 	int rc, i;
-	u32 count = 0, edid_size;
+	u32 count = 0, edid_size, num_modes = 0;
 	struct dsi_display_mode *modes = NULL;
 	struct drm_display_mode drm_mode;
 	struct dsi_display *display = data;
@@ -1263,6 +1347,9 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 	for (i = 0; i < count; i++) {
 		struct drm_display_mode *m;
 
+		if (modes[i].timing.refresh_rate == display->panel->aod_refresh_rate)
+			continue;
+
 		memset(&drm_mode, 0x0, sizeof(drm_mode));
 		dsi_convert_to_drm_mode(&modes[i], &drm_mode);
 		m = drm_mode_duplicate(connector->dev, &drm_mode);
@@ -1285,6 +1372,7 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 			m->type |= DRM_MODE_TYPE_PREFERRED;
 		}
 		drm_mode_probed_add(connector, m);
+		num_modes++;
 	}
 
 	rc = dsi_drm_update_edid_name(&edid, display->panel->name);
@@ -1296,7 +1384,8 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 	edid.width_cm = (connector->display_info.width_mm) / 10;
 	edid.height_cm = (connector->display_info.height_mm) / 10;
 
-	dsi_drm_update_dtd(&edid, modes, count);
+	dsi_drm_update_dtd(&edid, modes, count, display->panel->aod_refresh_rate);
+	count = num_modes;
 	dsi_drm_update_checksum(&edid);
 	rc =  drm_connector_update_edid_property(connector, &edid);
 	if (rc)

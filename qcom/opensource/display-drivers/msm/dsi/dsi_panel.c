@@ -1984,16 +1984,41 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		rc = -EINVAL;
 		goto error;
 	}
+#ifdef MI_DISPLAY_MODIFY
+	utils->read_u32(utils->data, "mi,aod-refresh-rate",
+			&panel->aod_refresh_rate);
+#endif
+	if (panel->aod_refresh_rate) {
+		if (panel->aod_refresh_rate != 30 ||
+			panel->panel_mode != DSI_OP_VIDEO_MODE ||
+			dfps_caps->type != DSI_DFPS_IMMEDIATE_VFP ||
+			dfps_caps->dfps_list_len < 2 ||
+			dfps_caps->dfps_list[0] == panel->aod_refresh_rate) {
+			DSI_ERR("[%s] invalid AOD refresh rate configuration\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+		for (i = 0; i < dfps_caps->dfps_list_len; i++)
+			if (dfps_caps->dfps_list[i] == panel->aod_refresh_rate)
+				break;
+		if (i == dfps_caps->dfps_list_len) {
+			DSI_ERR("[%s] AOD refresh rate missing from DFPS list\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+	}
 	dfps_caps->dfps_support = true;
 
-	/* calculate max and min fps */
-	dfps_caps->max_refresh_rate = dfps_caps->dfps_list[0];
-	dfps_caps->min_refresh_rate = dfps_caps->dfps_list[0];
+	/* Keep the AOD-only mode out of the userspace DFPS range. */
+	dfps_caps->max_refresh_rate = 0;
+	dfps_caps->min_refresh_rate = U32_MAX;
 
-	for (i = 1; i < dfps_caps->dfps_list_len; i++) {
+	for (i = 0; i < dfps_caps->dfps_list_len; i++) {
+		if (dfps_caps->dfps_list[i] == panel->aod_refresh_rate)
+			continue;
 		if (dfps_caps->dfps_list[i] < dfps_caps->min_refresh_rate)
 			dfps_caps->min_refresh_rate = dfps_caps->dfps_list[i];
-		else if (dfps_caps->dfps_list[i] > dfps_caps->max_refresh_rate)
+		if (dfps_caps->dfps_list[i] > dfps_caps->max_refresh_rate)
 			dfps_caps->max_refresh_rate = dfps_caps->dfps_list[i];
 	}
 
@@ -5090,8 +5115,11 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	mi_dsi_panel_parse_multi_timing_config(panel);
 
 	rc = dsi_panel_parse_dfps_caps(panel);
-	if (rc)
+	if (rc) {
 		DSI_ERR("failed to parse dfps configuration, rc=%d\n", rc);
+		if (panel->aod_refresh_rate)
+			goto error;
+	}
 
 	rc = dsi_panel_parse_qsync_caps(panel, of_node);
 	if (rc)

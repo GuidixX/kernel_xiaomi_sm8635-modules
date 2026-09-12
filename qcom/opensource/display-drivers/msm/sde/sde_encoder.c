@@ -5460,6 +5460,7 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool config_changed)
 	struct dsi_display *dsi_display = NULL;
 	struct dsi_display_mode adj_mode;
 	struct drm_bridge *bridge;
+	bool aod_mode_enable = false;
 	int rc = 0;
 #endif
 
@@ -5478,6 +5479,11 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool config_changed)
 		if (c_bridge) {
 			dsi_display = c_bridge->display;
 			adj_mode = c_bridge->dsi_mode;
+			/* A full enable into AOD also needs the panel entry sequence. */
+			if (dsi_display && dsi_display->panel && drm_enc->crtc)
+				aod_mode_enable = dsi_display->panel->aod_refresh_rate &&
+					adj_mode.timing.refresh_rate ==
+					dsi_display->panel->aod_refresh_rate;
 		}
 	}
 #endif
@@ -5507,7 +5513,7 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool config_changed)
 #ifdef MI_DISPLAY_MODIFY
 	if (dsi_display && dsi_display->panel &&
 		sde_enc->disp_info.intf_type == DRM_MODE_CONNECTOR_DSI &&
-		adj_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) {
+		((adj_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) || aod_mode_enable)) {
 		if (mi_get_panel_id_by_dsi_panel(dsi_display->panel) == N16T_PANEL_PA ||
 			mi_get_panel_id_by_dsi_panel(dsi_display->panel) == N16T_PANEL_PB ||
 			mi_get_panel_id_by_dsi_panel(dsi_display->panel) == N16T_PANEL_PC ||
@@ -5580,7 +5586,7 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool config_changed)
 
 #ifdef MI_DISPLAY_MODIFY
 	if (dsi_display && dsi_display->panel &&
-		adj_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) {
+		((adj_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) || aod_mode_enable)) {
 		if (mi_get_panel_id_by_dsi_panel(dsi_display->panel) == N16T_PANEL_PA ||
 			mi_get_panel_id_by_dsi_panel(dsi_display->panel) == N16T_PANEL_PB ||
 			mi_get_panel_id_by_dsi_panel(dsi_display->panel) == O16U_PANEL_PA ||

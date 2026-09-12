@@ -59,6 +59,16 @@ int dsi_connector_get_modes(struct drm_connector *connector,
 		void *display, const struct msm_resource_caps_info *avail_res);
 
 /**
+ * dsi_connector_atomic_check - force mode fixup for AOD power transitions
+ * @connector: Pointer to drm connector structure
+ * @display: Pointer to private display handle
+ * @state: Pending atomic state
+ * Returns: Zero on success or a negative error code
+ */
+int dsi_connector_atomic_check(struct drm_connector *connector, void *display,
+		struct drm_atomic_state *state);
+
+/**
  * dsi_connector_put_modes - callback to free up drm modes of the connector
  * @connector: Pointer to drm connector structure
  * @display: Pointer to private display handle
