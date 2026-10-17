@@ -51,6 +51,9 @@
 #define GOODIX_CORE_DEVICE_2_NAME		"goodix_ts2"
 #define GOODIX_DRIVER_VERSION			"v1.2.4"
 #define GOODIX_MAX_TOUCH				10
+/* Upper bound on frames drained per interrupt; keeps a stuck event flag from
+ * spinning the threaded handler forever. */
+#define GOODIX_MAX_EVENTS_PER_IRQ		32
 #define GOODIX_PEN_MAX_PRESSURE			4096
 #define GOODIX_MAX_PEN_KEY				2
 #define GOODIX_PEN_MAX_TILT				90

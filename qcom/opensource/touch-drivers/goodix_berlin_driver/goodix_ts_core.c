@@ -1346,12 +1346,40 @@ static int goodix_ts_request_handle(struct goodix_ts_core *cd,
  * @data: pointer to touch core data
  * return: 0 ok, <0 failed
  */
+
+static void goodix_ts_handle_events(struct goodix_ts_core *core_data)
+{
+	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
+	struct goodix_ts_event *ts_event = &core_data->ts_event;
+	int ret;
+	int i;
+
+	for (i = 0; i < GOODIX_MAX_EVENTS_PER_IRQ; i++) {
+		/* read touch data from touch device */
+		ret = hw_ops->event_handler(core_data, ts_event);
+		if (ret)
+			break;
+
+		if (ts_event->event_type == EVENT_TOUCH) {
+			/* report touch */
+			goodix_ts_report_finger(core_data->input_dev,
+					&ts_event->touch_data,
+					core_data->board_data.invert_xy);
+		}
+		if (core_data->board_data.pen_enable &&
+				ts_event->event_type == EVENT_PEN) {
+			goodix_ts_report_pen(core_data->pen_dev,
+					&ts_event->pen_data);
+		}
+		if (ts_event->event_type == EVENT_REQUEST)
+			goodix_ts_request_handle(core_data, ts_event);
+	}
+}
+
 static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 {
 	struct goodix_ts_core *core_data = data;
-	struct goodix_ts_hw_ops *hw_ops = core_data->hw_ops;
 	struct goodix_ext_module *ext_module, *next;
-	struct goodix_ts_event *ts_event = &core_data->ts_event;
 	struct goodix_ts_esd *ts_esd = &core_data->ts_esd;
 	int ret;
 
@@ -1371,23 +1399,7 @@ static irqreturn_t goodix_ts_threadirq_func(int irq, void *data)
 	}
 	mutex_unlock(&goodix_modules.mutex);
 
-	/* read touch data from touch device */
-	ret = hw_ops->event_handler(core_data, ts_event);
-	if (likely(!ret)) {
-		if (ts_event->event_type == EVENT_TOUCH) {
-			/* report touch */
-			goodix_ts_report_finger(core_data->input_dev,
-					&ts_event->touch_data,
-					core_data->board_data.invert_xy);
-		}
-		if (core_data->board_data.pen_enable &&
-				ts_event->event_type == EVENT_PEN) {
-			goodix_ts_report_pen(core_data->pen_dev,
-					&ts_event->pen_data);
-		}
-		if (ts_event->event_type == EVENT_REQUEST)
-			goodix_ts_request_handle(core_data, ts_event);
-	}
+	goodix_ts_handle_events(core_data);
 
 	return IRQ_HANDLED;
 }
@@ -2724,12 +2736,18 @@ static int goodix_ts_get_irq_num(void *data)
 	return core_data->irq;
 }
 
+/*
+ * This runs in the threaded handler, so blocking is allowed. Returning early
+ * because the TUI transition lock is busy discarded the event outright while
+ * the IRQ line was already acknowledged, so nobody would ever re-trigger it:
+ * a tap that lands during a TUI transition could be lost entirely. Wait for
+ * the lock instead of dropping the frame.
+ */
 static irqreturn_t  goodix_irq_handler(int irq, void *data)
 {
 	struct goodix_ts_core *core_data = data;
 
-	if (!mutex_trylock(&core_data->tui_transition_lock))
-		return IRQ_HANDLED;
+	mutex_lock(&core_data->tui_transition_lock);
 
 	goodix_ts_threadirq_func(irq, data);
 	mutex_unlock(&core_data->tui_transition_lock);
